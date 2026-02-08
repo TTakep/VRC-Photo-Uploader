@@ -6,107 +6,147 @@
     <title>VRC Photo Uploader for Discord</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* --- Theme Colors --- */
+        :root {
+            --bg-primary: #2c2f33;   /* メイン背景 */
+            --bg-secondary: #23272a; /* カード背景 */
+            --text-primary: #ffffff; /* メイン文字 */
+            --text-muted: #b9bbbe;   /* 補足文字（明るく修正） */
+            --accent: #7289da;       /* アクセントカラー */
+        }
+
         body {
-            background-color: #2c2f33; /* Discord Dark Theme Base */
-            color: #ffffff;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
+        /* Bootstrapのtext-mutedをオーバーライドして見やすくする */
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
         .container {
             max-width: 800px;
             margin-top: 50px;
         }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: none;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .form-control:focus {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border-color: var(--accent);
+            box-shadow: none;
+        }
+        /* input type=numberの右側のスピンボタンを消す（デザイン調整） */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
         .drop-zone {
-            border: 2px dashed #7289da;
+            border: 3px dashed var(--accent);
             border-radius: 10px;
             padding: 50px;
             text-align: center;
-            background-color: #23272a;
-            transition: all 0.3s ease;
+            background-color: var(--bg-secondary);
+            transition: all 0.2s ease;
             cursor: pointer;
         }
         .drop-zone:hover, .drop-zone.dragover {
-            background-color: #2c2f33;
-            border-color: #fff;
+            background-color: var(--accent);
+            border-color: var(--text-primary);
+            color: var(--text-primary);
         }
         .drop-zone p {
             font-size: 1.2rem;
-            color: #99aab5;
+            color: var(--text-muted); /* 明るく修正 */
             pointer-events: none;
+            margin-bottom: 0;
         }
-        .card {
-            background-color: #23272a;
-            border: none;
+        .drop-zone:hover p {
+            color: var(--text-primary);
         }
-        .form-control {
-            background-color: #2c2f33;
-            border: 1px solid #23272a;
-            color: white;
-        }
-        .form-control:focus {
-            background-color: #2c2f33;
-            color: white;
-            border-color: #7289da;
-            box-shadow: none;
-        }
-        .status-badge {
-            font-size: 0.9rem;
-        }
+
         #logArea {
             max-height: 300px;
             overflow-y: auto;
-            background-color: #000;
+            background-color: #000000;
             padding: 10px;
             border-radius: 5px;
-            font-family: monospace;
+            font-family: 'Consolas', 'Monaco', monospace;
             font-size: 0.9rem;
+            color: #dbdee1; /* デフォルト文字色を明るく */
         }
+        
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #2c2f33; }
-        ::-webkit-scrollbar-thumb { background: #7289da; border-radius: 4px; }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #5b6eae; }
     </style>
 </head>
 <body>
 
 <div class="container mb-5">
-    <h2 class="text-center mb-4"><i class="bi bi-discord"></i> VRC Photo Uploader</h2>
+    <h2 class="text-center mb-4 fw-bold"><i class="bi bi-discord"></i> VRC Photo Uploader</h2>
     
-    <div class="card mb-4 shadow-sm">
-        <div class="card-body">
-            <h5 class="card-title">設定</h5>
-            <div class="mb-3">
-                <label for="webhookUrl" class="form-label">Discord Webhook URL</label>
-                <input type="password" class="form-control" id="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
-                <div class="form-text text-muted">URLはブラウザ内に保存され、外部には送信されません。</div>
+    <div class="card mb-4 shadow">
+        <div class="card-body p-4">
+            <h5 class="card-title mb-3 fw-bold">設定</h5>
+            <div class="mb-4">
+                <label for="webhookUrl" class="form-label fw-bold">Discord Webhook URL</label>
+                <input type="password" class="form-control form-control-lg" id="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+                <div class="form-text text-muted mt-2">
+                    <small>※ URLはブラウザ内に暗号化されずに保存されます。共有PCでは使用しないでください。外部サーバーへは送信されません。</small>
+                </div>
             </div>
             <div class="row">
                  <div class="col-md-6 mb-3">
-                    <label for="maxFileSize" class="form-label">最大ファイルサイズ (MB)</label>
-                    <input type="number" class="form-control" id="maxFileSize" value="8">
-                    <div class="form-text text-muted">これを超えると自動リサイズされます（PNG維持）</div>
+                    <label for="maxFileSize" class="form-label fw-bold">最大ファイルサイズ (MB)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control form-control-lg" id="maxFileSize" value="8" min="1">
+                        <span class="input-group-text bg-secondary text-light border-secondary">MB</span>
+                    </div>
+                    <div class="form-text text-muted mt-2">
+                        <small>これを超えると、PNG形式を維持したまま自動的に解像度を縮小します。</small>
+                    </div>
                  </div>
             </div>
         </div>
     </div>
 
     <div id="dropZone" class="drop-zone mb-4 shadow-sm">
-        <p class="mb-0">ここに写真をドラッグ＆ドロップ<br>またはクリックして選択</p>
-        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+        <p>ここに写真をドラッグ＆ドロップ<br>またはクリックしてファイルを選択</p>
+        <input type="file" id="fileInput" multiple accept="image/png, image/jpeg, image/webp" style="display: none;">
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <span>処理ログ</span>
-            <button id="clearLog" class="btn btn-sm btn-secondary">ログ消去</button>
+    <div class="card shadow">
+        <div class="card-header d-flex justify-content-between align-items-center py-3 bg-secondary text-light border-bottom-0">
+            <span class="fw-bold">処理ログ</span>
+            <button id="clearLog" class="btn btn-sm btn-outline-light">ログ消去</button>
         </div>
-        <div class="card-body">
-            <div class="progress mb-3" style="height: 20px;">
-                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+        <div class="card-body p-0">
+            <div class="progress" style="height: 5px; border-radius: 0;">
+                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%; transition: width 0.3s ease;"></div>
             </div>
-            <div id="logArea"></div>
+            <div id="logArea" class="p-3"></div>
         </div>
     </div>
 </div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
 <script>
     // --- Configuration & State ---
@@ -118,18 +158,23 @@
     const progressBar = document.getElementById('progressBar');
     
     let uploadQueue = [];
+    let totalFilesToProcess = 0;
+    let processedFilesCount = 0;
     let isProcessing = false;
 
     // --- Initialization ---
-    // Load settings from Local Storage
     window.addEventListener('load', () => {
         const savedUrl = localStorage.getItem('vrc_discord_webhook');
         if (savedUrl) webhookInput.value = savedUrl;
+        const savedSize = localStorage.getItem('vrc_max_file_size');
+        if (savedSize) maxSizeInput.value = savedSize;
     });
 
-    // Save settings on change
     webhookInput.addEventListener('change', () => {
         localStorage.setItem('vrc_discord_webhook', webhookInput.value.trim());
+    });
+    maxSizeInput.addEventListener('change', () => {
+        localStorage.setItem('vrc_max_file_size', maxSizeInput.value);
     });
 
     // --- Drag & Drop Handlers ---
@@ -137,7 +182,7 @@
     
     fileInput.addEventListener('change', (e) => {
         handleFiles(e.target.files);
-        fileInput.value = ''; // Reset
+        fileInput.value = ''; 
     });
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -170,17 +215,22 @@
             return;
         }
 
-        const fileArray = Array.from(files);
+        // Filter only images
+        const fileArray = Array.from(files).filter(file => file.type.startsWith('image/'));
         const total = fileArray.length;
         
-        if (total === 0) return;
+        if (total === 0) {
+            addLog('画像ファイルが選択されていません。', '#ff5555');
+            return;
+        }
 
-        addLog(`--- ${total}枚のファイルを受け付けました ---`, '#aaa');
+        addLog(`--- ${total}枚の画像を受け付けました ---`, '#7289da');
 
         // Add to queue
         fileArray.forEach(file => {
             uploadQueue.push(file);
         });
+        totalFilesToProcess += total;
 
         if (!isProcessing) {
             processQueue();
@@ -190,6 +240,8 @@
     async function processQueue() {
         if (uploadQueue.length === 0) {
             isProcessing = false;
+            totalFilesToProcess = 0;
+            processedFilesCount = 0;
             updateProgress(0);
             addLog('すべての処理が完了しました。', '#4caf50');
             return;
@@ -202,9 +254,12 @@
             await processAndUpload(file);
         } catch (error) {
             addLog(`エラー: ${file.name} - ${error.message}`, '#ff5555');
+        } finally {
+            processedFilesCount++;
+            updateProgress((processedFilesCount / totalFilesToProcess) * 100);
         }
 
-        // Discord Rate Limit Avoidance: Wait 1 second before next
+        // Discord Rate Limit Avoidance: Wait 1 second base time
         await new Promise(r => setTimeout(r, 1000));
         
         // Recursion
@@ -214,24 +269,26 @@
     async function processAndUpload(file) {
         const maxBytes = maxSizeInput.value * 1024 * 1024;
         let fileToSend = file;
+        const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
 
-        addLog(`処理中: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, '#fff');
+        addLog(`処理開始: ${file.name} (${originalSizeMB} MB)`, '#dbdee1');
 
         // Check if resize is needed
         if (file.size > maxBytes) {
-            addLog(`サイズ超過: リサイズを開始します (目標: ${maxSizeInput.value}MB以下)`, '#ffa500');
+            addLog(`サイズ超過 (${maxSizeInput.value}MB超): リサイズを開始します...`, '#ffa500');
             try {
                 fileToSend = await resizeImageToFit(file, maxBytes);
-                addLog(`リサイズ完了: ${(fileToSend.size / 1024 / 1024).toFixed(2)} MB`, '#ffa500');
+                const newSizeMB = (fileToSend.size / 1024 / 1024).toFixed(2);
+                addLog(`リサイズ完了: ${newSizeMB} MB に縮小しました`, '#ffa500');
             } catch (e) {
-                throw new Error('画像処理に失敗しました: ' + e);
+                throw new Error('リサイズ処理に失敗しました: ' + e);
             }
         }
 
         await uploadToDiscord(fileToSend, file.name);
     }
 
-    // Resize Logic (Iterative downscaling to keep PNG)
+    // Resize Logic (Iterative downscaling to keep PNG format)
     function resizeImageToFit(file, maxBytes) {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -241,69 +298,115 @@
                 
                 let width = img.width;
                 let height = img.height;
-                let scale = 0.9; // Scale down by 10% each step
+                // Start with a more aggressive step down for very large files
+                let scale = (file.size > maxBytes * 2) ? 0.75 : 0.9; 
                 let blob = null;
-
-                // Loop until size fits
                 let attempts = 0;
+
+                addLog(`元の解像度: ${width}x${height}`, '#888');
+
                 do {
                     if (attempts > 0) {
                         width = Math.floor(width * scale);
                         height = Math.floor(height * scale);
+                        // If still too big after many attempts, scale more aggressively
+                        if (attempts > 5) scale = 0.8;
                     }
                     
                     canvas.width = width;
                     canvas.height = height;
+                    // Better quality scaling
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+                    // Use original mime type if it is PNG, otherwise default to PNG for lossless
+                    const mimeType = file.type === 'image/png' ? 'image/png' : 'image/png';
+                    blob = await new Promise(r => canvas.toBlob(r, mimeType));
                     attempts++;
                     
-                    // Safety break to prevent infinite loops on weird files
-                    if (attempts > 20) break; 
+                    // Failsafe
+                    if (attempts > 20 || width < 100 || height < 100) {
+                         break;
+                    }
+                    
+                    if (blob.size > maxBytes) {
+                         addLog(`...試行${attempts}: ${width}x${height} -> ${(blob.size/1024/1024).toFixed(2)}MB (まだ大きすぎます)`, '#888');
+                    }
 
                 } while (blob.size > maxBytes);
 
                 if (blob.size > maxBytes) {
-                    reject('画質を落としてもサイズが規定値に収まりませんでした。');
+                    reject('解像度を下げても目標サイズに収まりませんでした。');
                 } else {
-                    // Recreate File object
-                    const newFile = new File([blob], file.name, { type: 'image/png' });
+                    addLog(`最終解像度: ${width}x${height}`, '#888');
+                    // Recreate File object to preserve original name
+                    const newFile = new File([blob], file.name, { type: blob.type });
                     resolve(newFile);
                 }
+                // Clean up memory
+                canvas = null;
+                ctx = null;
             };
-            img.onerror = reject;
-            img.src = URL.createObjectURL(file);
+            img.onerror = () => reject('画像の読み込みに失敗しました。破損している可能性があります。');
+            
+            // Clean up object URL
+            const objectUrl = URL.createObjectURL(file);
+            img.src = objectUrl;
+            img.onloadend = () => URL.revokeObjectURL(objectUrl);
         });
     }
 
-    // Discord Webhook Upload
-    function uploadToDiscord(file, originalName) {
+    // Discord Webhook Upload with Retry Logic
+    function uploadToDiscord(file, originalName, retryCount = 0) {
         return new Promise((resolve, reject) => {
+            if (retryCount > 5) {
+                reject('リトライ回数が上限に達しました。送信を諦めます。');
+                return;
+            }
+
+            addLog(`${originalName} を送信中...`, '#dbdee1');
             const formData = new FormData();
             formData.append('file', file, originalName);
-            // formData.append('content', `Uploaded: ${originalName}`); // Optional text
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', webhookInput.value.trim());
 
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    addLog(`送信成功: ${originalName}`, '#4caf50');
+                    addLog(`送信成功: ${originalName} ✅`, '#4caf50');
                     resolve();
                 } else if (xhr.status === 429) {
                     // Rate Limited
-                    const retryAfter = JSON.parse(xhr.responseText).retry_after;
-                    addLog(`レートリミット到達: ${retryAfter}秒待機して再送します...`, '#ffa500');
+                    let retryAfter = 5; // Default 5s
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        retryAfter = response.retry_after || retryAfter;
+                        // Discord uses milliseconds sometimes, but usually seconds for retry_after in JSON. 
+                        // Safety check: if it seems too small, assume it's seconds.
+                        if (retryAfter < 100) retryAfter = retryAfter; 
+                        else retryAfter = retryAfter / 1000;
+
+                    } catch (e) { /* ignore JSON parse error */ }
+
+                    const waitMs = (retryAfter * 1000) + 500; // Add buffer
+                    addLog(`レートリミット到達 (429)。${retryAfter.toFixed(1)}秒待機して再送します... (試行: ${retryCount+1})`, '#ffa500');
+                    
                     setTimeout(() => {
-                        uploadToDiscord(file, originalName).then(resolve).catch(reject);
-                    }, retryAfter * 1000 + 100); // Add slight buffer
+                        uploadToDiscord(file, originalName, retryCount + 1).then(resolve).catch(reject);
+                    }, waitMs);
+
                 } else {
-                    reject(`Status ${xhr.status}`);
+                    addLog(`送信失敗: Status ${xhr.status} - ${xhr.statusText}`, '#ff5555');
+                    reject(`HTTP Status ${xhr.status}`);
                 }
             };
 
-            xhr.onerror = () => reject('Network Error');
+            xhr.onerror = () => {
+                addLog('ネットワークエラーが発生しました。', '#ff5555');
+                reject('Network Error');
+            };
+            
             xhr.send(formData);
         });
     }
@@ -311,10 +414,12 @@
     // --- UI Helpers ---
     function addLog(text, color) {
         const div = document.createElement('div');
-        div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
-        div.style.color = color || '#ccc';
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        div.innerHTML = `<span style="color:#888; font-size:0.8em;">[${time}]</span> ${text}`;
+        div.style.color = color || '#dbdee1'; // デフォルト文字色を明るく
         logArea.appendChild(div);
-        logArea.scrollTop = logArea.scrollHeight;
+        // Smooth scroll to bottom
+        logArea.scrollTo({ top: logArea.scrollHeight, behavior: 'smooth' });
     }
 
     function updateProgress(percent) {
@@ -323,6 +428,7 @@
     
     document.getElementById('clearLog').addEventListener('click', () => {
         logArea.innerHTML = '';
+        updateProgress(0);
     });
 </script>
 
