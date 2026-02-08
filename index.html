@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRC Photo Uploader for Discord</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #2c2f33; /* Discord Dark Theme Base */
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin-top: 50px;
+        }
+        .drop-zone {
+            border: 2px dashed #7289da;
+            border-radius: 10px;
+            padding: 50px;
+            text-align: center;
+            background-color: #23272a;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            background-color: #2c2f33;
+            border-color: #fff;
+        }
+        .drop-zone p {
+            font-size: 1.2rem;
+            color: #99aab5;
+            pointer-events: none;
+        }
+        .card {
+            background-color: #23272a;
+            border: none;
+        }
+        .form-control {
+            background-color: #2c2f33;
+            border: 1px solid #23272a;
+            color: white;
+        }
+        .form-control:focus {
+            background-color: #2c2f33;
+            color: white;
+            border-color: #7289da;
+            box-shadow: none;
+        }
+        .status-badge {
+            font-size: 0.9rem;
+        }
+        #logArea {
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: #000;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #2c2f33; }
+        ::-webkit-scrollbar-thumb { background: #7289da; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container mb-5">
+    <h2 class="text-center mb-4"><i class="bi bi-discord"></i> VRC Photo Uploader</h2>
+    
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">設定</h5>
+            <div class="mb-3">
+                <label for="webhookUrl" class="form-label">Discord Webhook URL</label>
+                <input type="password" class="form-control" id="webhookUrl" placeholder="https://discord.com/api/webhooks/...">
+                <div class="form-text text-muted">URLはブラウザ内に保存され、外部には送信されません。</div>
+            </div>
+            <div class="row">
+                 <div class="col-md-6 mb-3">
+                    <label for="maxFileSize" class="form-label">最大ファイルサイズ (MB)</label>
+                    <input type="number" class="form-control" id="maxFileSize" value="8">
+                    <div class="form-text text-muted">これを超えると自動リサイズされます（PNG維持）</div>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dropZone" class="drop-zone mb-4 shadow-sm">
+        <p class="mb-0">ここに写真をドラッグ＆ドロップ<br>またはクリックして選択</p>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>処理ログ</span>
+            <button id="clearLog" class="btn btn-sm btn-secondary">ログ消去</button>
+        </div>
+        <div class="card-body">
+            <div class="progress mb-3" style="height: 20px;">
+                <div id="progressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div>
+            </div>
+            <div id="logArea"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Configuration & State ---
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const webhookInput = document.getElementById('webhookUrl');
+    const maxSizeInput = document.getElementById('maxFileSize');
+    const logArea = document.getElementById('logArea');
+    const progressBar = document.getElementById('progressBar');
+    
+    let uploadQueue = [];
+    let isProcessing = false;
+
+    // --- Initialization ---
+    // Load settings from Local Storage
+    window.addEventListener('load', () => {
+        const savedUrl = localStorage.getItem('vrc_discord_webhook');
+        if (savedUrl) webhookInput.value = savedUrl;
+    });
+
+    // Save settings on change
+    webhookInput.addEventListener('change', () => {
+        localStorage.setItem('vrc_discord_webhook', webhookInput.value.trim());
+    });
+
+    // --- Drag & Drop Handlers ---
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+        fileInput.value = ''; // Reset
+    });
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        handleFiles(dt.files);
+    });
+
+    // --- Main Logic ---
+
+    function handleFiles(files) {
+        if (!webhookInput.value) {
+            alert('先にWebhook URLを設定してください。');
+            return;
+        }
+
+        const fileArray = Array.from(files);
+        const total = fileArray.length;
+        
+        if (total === 0) return;
+
+        addLog(`--- ${total}枚のファイルを受け付けました ---`, '#aaa');
+
+        // Add to queue
+        fileArray.forEach(file => {
+            uploadQueue.push(file);
+        });
+
+        if (!isProcessing) {
+            processQueue();
+        }
+    }
+
+    async function processQueue() {
+        if (uploadQueue.length === 0) {
+            isProcessing = false;
+            updateProgress(0);
+            addLog('すべての処理が完了しました。', '#4caf50');
+            return;
+        }
+
+        isProcessing = true;
+        const file = uploadQueue.shift();
+        
+        try {
+            await processAndUpload(file);
+        } catch (error) {
+            addLog(`エラー: ${file.name} - ${error.message}`, '#ff5555');
+        }
+
+        // Discord Rate Limit Avoidance: Wait 1 second before next
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // Recursion
+        processQueue();
+    }
+
+    async function processAndUpload(file) {
+        const maxBytes = maxSizeInput.value * 1024 * 1024;
+        let fileToSend = file;
+
+        addLog(`処理中: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, '#fff');
+
+        // Check if resize is needed
+        if (file.size > maxBytes) {
+            addLog(`サイズ超過: リサイズを開始します (目標: ${maxSizeInput.value}MB以下)`, '#ffa500');
+            try {
+                fileToSend = await resizeImageToFit(file, maxBytes);
+                addLog(`リサイズ完了: ${(fileToSend.size / 1024 / 1024).toFixed(2)} MB`, '#ffa500');
+            } catch (e) {
+                throw new Error('画像処理に失敗しました: ' + e);
+            }
+        }
+
+        await uploadToDiscord(fileToSend, file.name);
+    }
+
+    // Resize Logic (Iterative downscaling to keep PNG)
+    function resizeImageToFit(file, maxBytes) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = async () => {
+                let canvas = document.createElement('canvas');
+                let ctx = canvas.getContext('2d');
+                
+                let width = img.width;
+                let height = img.height;
+                let scale = 0.9; // Scale down by 10% each step
+                let blob = null;
+
+                // Loop until size fits
+                let attempts = 0;
+                do {
+                    if (attempts > 0) {
+                        width = Math.floor(width * scale);
+                        height = Math.floor(height * scale);
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+                    attempts++;
+                    
+                    // Safety break to prevent infinite loops on weird files
+                    if (attempts > 20) break; 
+
+                } while (blob.size > maxBytes);
+
+                if (blob.size > maxBytes) {
+                    reject('画質を落としてもサイズが規定値に収まりませんでした。');
+                } else {
+                    // Recreate File object
+                    const newFile = new File([blob], file.name, { type: 'image/png' });
+                    resolve(newFile);
+                }
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    // Discord Webhook Upload
+    function uploadToDiscord(file, originalName) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', file, originalName);
+            // formData.append('content', `Uploaded: ${originalName}`); // Optional text
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', webhookInput.value.trim());
+
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    addLog(`送信成功: ${originalName}`, '#4caf50');
+                    resolve();
+                } else if (xhr.status === 429) {
+                    // Rate Limited
+                    const retryAfter = JSON.parse(xhr.responseText).retry_after;
+                    addLog(`レートリミット到達: ${retryAfter}秒待機して再送します...`, '#ffa500');
+                    setTimeout(() => {
+                        uploadToDiscord(file, originalName).then(resolve).catch(reject);
+                    }, retryAfter * 1000 + 100); // Add slight buffer
+                } else {
+                    reject(`Status ${xhr.status}`);
+                }
+            };
+
+            xhr.onerror = () => reject('Network Error');
+            xhr.send(formData);
+        });
+    }
+
+    // --- UI Helpers ---
+    function addLog(text, color) {
+        const div = document.createElement('div');
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+        div.style.color = color || '#ccc';
+        logArea.appendChild(div);
+        logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    function updateProgress(percent) {
+        progressBar.style.width = percent + '%';
+    }
+    
+    document.getElementById('clearLog').addEventListener('click', () => {
+        logArea.innerHTML = '';
+    });
+</script>
+
+</body>
+</html>
