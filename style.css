@@ -1,0 +1,123 @@
+/* --- CSS Variables for Theming --- */
+:root {
+    /* Default (Dark) */
+    --bg-primary: #2c2f33;
+    --bg-secondary: #23272a;
+    --text-primary: #ffffff;
+    --text-muted: #b9bbbe;
+    --border-color: #40444b;
+    --accent: #5865F2; /* Discord Blurple */
+    --accent-hover: #4752c4;
+    --input-bg: #40444b;
+    --log-bg: #101010;
+}
+
+[data-theme="light"] {
+    --bg-primary: #f2f3f5;
+    --bg-secondary: #ffffff;
+    --text-primary: #2e3338;
+    --text-muted: #747f8d;
+    --border-color: #e3e5e8;
+    --accent: #5865F2;
+    --accent-hover: #4752c4;
+    --input-bg: #ebedef;
+    --log-bg: #f8f9fa;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.text-muted { color: var(--text-muted) !important; }
+
+.container { max-width: 800px; margin-top: 40px; }
+
+/* Card Styling */
+.card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+.card-header {
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(0,0,0,0.05);
+}
+
+/* Form Controls */
+.form-control, .form-select {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+.form-control:focus, .form-select:focus {
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.25rem rgba(88, 101, 242, 0.25);
+}
+/* Placeholder color hack */
+.form-control::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+/* Drop Zone */
+.drop-zone {
+    border: 3px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    background-color: var(--bg-secondary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background-color: rgba(88, 101, 242, 0.05);
+}
+.drop-zone i { font-size: 3rem; color: var(--text-muted); margin-bottom: 10px; display: block; }
+
+/* Log Area */
+#logArea {
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: var(--log-bg);
+    padding: 12px;
+    border-radius: 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+/* Progress Bar */
+.progress {
+    height: 25px;
+    background-color: var(--input-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+.progress-bar {
+    background-color: var(--accent);
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+/* Text inside progress bar (always white for contrast on accent color) */
+.progress-text {
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    z-index: 2;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
